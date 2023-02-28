@@ -1,0 +1,68 @@
+<html>
+
+  <head>
+    <title>FreeAudioToVideo</title>
+    <script src="/ffmpeg.min.js"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h3>Add audio and image files and hit convert!</h3>
+    <div style="display:flex;">
+      <div>
+        <label for="photo">Choose a Photo:</label>
+        <input type="file" name="photo" accept="image/jpeg">
+      </div>
+      <div>
+        <label for="audio">Choose a audio:</label>
+        <input type="file" name="audio" accept="audio/mp3">
+      </div>
+    </div>
+    <br>
+    <button id="start-btn">Convert</button>
+    <p id="message"></p>
+    <video id="output-video" controls></video><br />
+    <script>
+      const { createFFmpeg, fetchFile } = FFmpeg;
+      const ffmpeg = createFFmpeg({ log: true });
+      const image2video = async () => {
+        const message = document.getElementById('message');
+        if (document.getElementsByName("audio")[0].files.length === 0 || document.getElementsByName("photo")[0].files === 0) {
+          message.innerHTML = 'Please add audio and photo';
+          return
+        }
+        message.innerHTML = 'Starting...';
+        await ffmpeg.load();
+        message.innerHTML = 'Loading...';
+        audio = document.getElementsByName("audio")[0].files[0];
+        photo = document.getElementsByName("photo")[0].files[0];
+        ffmpeg.FS('writeFile', 'audio.mp3', await fetchFile(audio));
+        ffmpeg.FS('writeFile', 'photo.jpg', await fetchFile(photo));
+        message.innerHTML = 'Processing...';
+        await ffmpeg.run('-loop', '1', '-i', 'photo.jpg', '-i', 'audio.mp3', '-c:v', 'libx264', '-tune', 'stillimage', '-c:a', 'aac', '-b:a', '192k', '-pix_fmt', 'yuv420p', '-shortest', 'out.mp4')
+        const data = ffmpeg.FS('readFile', 'out.mp4');
+        ffmpeg.FS('unlink', 'audio.mp3');
+        ffmpeg.FS('unlink', 'photo.jpg');
+        message.innerHTML = 'Done';
+        const video = document.getElementById('output-video');
+        video.src = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+      }
+      const elm = document.getElementById('start-btn');
+      elm.addEventListener('click', image2video);
+    </script>
+  </body>
+
+</html>
